@@ -225,11 +225,26 @@ export const useGameLogic = () => {
 
         newPlayers[state.currentPlayerIndex] = player;
 
+        // Win Condition Check
+        let winner = null;
+        if (newTotalScore >= 10000) {
+            winner = player;
+            // Trigger confetti
+            import('canvas-confetti').then((confetti) => {
+                confetti.default({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            });
+        }
+
         setState(prev => ({
             ...prev,
             players: newPlayers,
-            currentPlayerIndex: (prev.currentPlayerIndex + 1) % prev.players.length,
-            notification: notification || prev.notification
+            currentPlayerIndex: winner ? prev.currentPlayerIndex : (prev.currentPlayerIndex + 1) % prev.players.length, // Don't change turn if won
+            notification: notification || prev.notification,
+            winner: winner // Add winner to state
         }));
         setTempScore(0);
     };
@@ -298,6 +313,14 @@ export const useGameLogic = () => {
 
     const clearNotification = () => setState(prev => ({ ...prev, notification: null }));
 
+    const continueGame = () => {
+        setState(prev => ({
+            ...prev,
+            winner: null,
+            currentPlayerIndex: (prev.currentPlayerIndex + 1) % prev.players.length
+        }));
+    };
+
     return {
         state,
         tempScore,
@@ -311,6 +334,7 @@ export const useGameLogic = () => {
             addBar,
             undo,
             clearNotification,
+            continueGame,
             setCurrentPlayer: (index) => setState(prev => ({ ...prev, currentPlayerIndex: index }))
         }
     };
