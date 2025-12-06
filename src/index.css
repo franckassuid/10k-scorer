@@ -22,9 +22,10 @@ body {
   display: flex;
   place-items: center;
   min-width: 320px;
-  min-height: 100vh;
+  /* min-height: 100vh; Removed to avoid conflict with fixed layout */
   background-color: #000000;
   overflow-x: hidden;
+  height: 100%;
 }
 
 #root {

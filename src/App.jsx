@@ -27,10 +27,10 @@ function App() {
 
 
   return (
-    <div className="h-screen w-screen bg-black text-white flex flex-col font-sans selection:bg-white/20 overflow-hidden fixed inset-0">
+    <div className="h-[100dvh] w-screen bg-black text-white flex flex-col font-sans selection:bg-white/20 overflow-hidden fixed inset-0">
 
       {/* Header */}
-      <header className="px-3 py-2 flex items-center justify-between border-b border-white/10 bg-black/50 backdrop-blur-md z-50 shrink-0 h-12 md:h-16">
+      <header className="px-3 py-2 flex items-center justify-between border-b border-white/10 bg-black/50 backdrop-blur-md z-50 shrink-0 h-12 md:h-16 pt-safe">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="10K Scorer Logo" className="h-6 w-6 object-contain" />
           <h1 className="text-lg font-bold tracking-widest uppercase bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
@@ -88,8 +88,8 @@ function App() {
         </div>
       </main>
 
-      {/* Controls Area - Sticky Bottom */}
-      <div className="p-2 md:p-6 border-t border-white/10 bg-black/90 backdrop-blur-md z-50 shrink-0">
+      {/* Controls Area - Sticky Bottom with Safe Area */}
+      <div className="p-2 md:p-6 border-t border-white/10 bg-black/90 backdrop-blur-md z-50 shrink-0 pb-[env(safe-area-inset-bottom,20px)] md:pb-6">
         <div className="max-w-md mx-auto w-full">
           <Controls
             tempScore={tempScore}
