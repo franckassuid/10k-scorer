@@ -12,8 +12,8 @@ export default defineConfig({
         name: '10K Scorer',
         short_name: '10K',
         description: 'Score keeper for the 10,000 dice game',
-        theme_color: '#1a1a1a',
-        background_color: '#1a1a1a',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
