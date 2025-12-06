@@ -4,6 +4,7 @@ import { ScoreColumn } from './components/ScoreColumn';
 import { Controls } from './components/Controls';
 import { Menu, RotateCcw, MoreVertical, X, UserPlus, Trash2, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
+import { InstallPrompt } from './components/InstallPrompt';
 
 function App() {
   const { state, tempScore, actions } = useGameLogic();
@@ -249,6 +250,9 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Install Prompt */}
+      <InstallPrompt />
 
     </div>
   );
