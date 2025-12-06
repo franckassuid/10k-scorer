@@ -2,7 +2,7 @@ import React from 'react';
 import { clsx } from 'clsx';
 import { Plus, Minus, Check, Ban, RotateCcw } from 'lucide-react';
 
-export function Controls({ tempScore, onUpdate, onValidate, onBar, onUndo, canValidate }) {
+export function Controls({ tempScore, remainingScore, onUpdate, onValidate, onBar, onUndo, canValidate }) {
     const values = [100, 200, 500];
 
     return (
@@ -20,15 +20,30 @@ export function Controls({ tempScore, onUpdate, onValidate, onBar, onUndo, canVa
 
             {/* Score Modifiers */}
             <div className="grid grid-cols-3 gap-1.5 md:gap-2">
-                {values.map((val) => (
-                    <button
-                        key={`add-${val}`}
-                        onClick={() => onUpdate(val)}
-                        className="h-10 md:h-12 lg:h-14 rounded-lg md:rounded-xl bg-white/5 hover:bg-white/10 active:scale-95 transition-all flex flex-col items-center justify-center gap-0.5 group"
-                    >
-                        <span className="text-base md:text-lg lg:text-xl font-light text-white group-hover:text-emerald-400 transition-colors">+{val}</span>
-                    </button>
-                ))}
+                {values.map((val) => {
+                    // Check if adding this value would exceed remaining score
+                    // If remainingScore is undefined/NaN, allow? No, safeguard.
+                    // But standard logic: if val > remainingScore, disable.
+                    const isDisabled = (typeof remainingScore === 'number') && (val > remainingScore);
+
+                    return (
+                        <button
+                            key={`add-${val}`}
+                            onClick={() => !isDisabled && onUpdate(val)}
+                            disabled={isDisabled}
+                            className={clsx(
+                                "h-10 md:h-12 lg:h-14 rounded-lg md:rounded-xl bg-white/5 transition-all flex flex-col items-center justify-center gap-0.5 group relative overflow-hidden",
+                                isDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-white/10 active:scale-95"
+                            )}
+                        >
+                            <span className={clsx(
+                                "text-base md:text-lg lg:text-xl font-light transition-colors",
+                                isDisabled ? "text-white/20" : "text-white group-hover:text-emerald-400"
+                            )}>+{val}</span>
+                            {/* Mini indicator for why disabled? No, just grey out */}
+                        </button>
+                    );
+                })}
                 {values.map((val) => (
                     <button
                         key={`sub-${val}`}

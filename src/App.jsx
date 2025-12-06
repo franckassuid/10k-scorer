@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useGameLogic } from './hooks/useGameLogic';
 import { ScoreColumn } from './components/ScoreColumn';
 import { Controls } from './components/Controls';
-import { Menu, RotateCcw, MoreVertical, X, UserPlus, Trash2, Plus } from 'lucide-react';
+import { Menu, RotateCcw, MoreVertical, X, UserPlus, Trash2, Plus, Trophy, Medal } from 'lucide-react';
 import { clsx } from 'clsx';
 import { InstallPrompt } from './components/InstallPrompt';
 
 function App() {
-  const { state, tempScore, actions } = useGameLogic();
+  const { state, tempScore, remainingScore, actions } = useGameLogic();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState(null);
   const scrollContainerRef = React.useRef(null);
@@ -69,7 +69,7 @@ function App() {
               <div
                 key={player.id}
                 className={clsx(
-                  "snap-center shrink-0 flex flex-col h-full min-w-[85px] transition-all duration-300",
+                  "snap-start shrink-0 flex flex-col h-full min-w-[85px] transition-all duration-300",
                   // Use widthClass for mobile/tablet. On large desktop, enforce max width for readability?
                   // User complained about empty space, so let them stretch on tablet.
                   // Just apply widthClass universally, but maybe add a max-width constraint for massive screens?
@@ -83,15 +83,17 @@ function App() {
                 <ScoreColumn
                   player={player}
                   isActive={state.players[state.currentPlayerIndex]?.id === player.id}
+                  isFinished={!!player.finishedRank}
+                  rank={player.finishedRank}
                   onEdit={() => setEditingPlayerId(player.id)}
-                  onSelect={() => actions.setCurrentPlayer(index)}
+                  onSelect={() => !player.finishedRank && actions.setCurrentPlayer(index)}
                 />
               </div>
             );
           })}
 
           {/* Add Player Button */}
-          <div className="snap-center shrink-0 hidden md:flex items-center justify-center border-l border-white/10 md:border-2 md:border-dashed md:border-white/10 md:rounded-2xl w-[85px] md:w-[100px] h-full hover:bg-white/5 transition-colors cursor-pointer group"
+          <div className="snap-start shrink-0 hidden md:flex items-center justify-center border-l border-white/10 md:border-2 md:border-dashed md:border-white/10 md:rounded-2xl w-[85px] md:w-[100px] h-full hover:bg-white/5 transition-colors cursor-pointer group"
             onClick={() => actions.addPlayer()}
           >
             <button className="p-4 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors">
@@ -106,6 +108,7 @@ function App() {
         <div className="max-w-md mx-auto w-full">
           <Controls
             tempScore={tempScore}
+            remainingScore={remainingScore}
             onUpdate={actions.updateTempScore}
             onValidate={actions.validateTurn}
             onBar={actions.addBar}
@@ -172,42 +175,78 @@ function App() {
         </div>
       )}
 
-      {/* Winner Modal */}
-      {state.winner && (
+      {/* Winner Modal (Intermediate) */}
+      {state.winner && state.gameStatus !== 'finished' && (
         <div className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-500">
           <div className="w-full max-w-sm bg-[#111] border border-yellow-500/30 p-8 rounded-3xl text-center shadow-[0_0_50px_rgba(234,179,8,0.2)]">
             <div className="text-6xl mb-4">🏆</div>
             <h2 className="text-3xl font-bold text-white mb-2">Victoire !</h2>
             <p className="text-xl text-white/70 mb-8">
-              <span className="text-yellow-400 font-bold">{state.winner.name}</span> a atteint {state.winner.score.toLocaleString()} points !
+              <span className="text-yellow-400 font-bold">{state.winner.name}</span> termine avec {state.winner.score.toLocaleString()} points !
             </p>
 
             <div className="space-y-3">
               <button
-                onClick={() => actions.resetGame()}
-                className="w-full p-4 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition-colors"
+                onClick={() => actions.continueGame()}
+                className="w-full p-4 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold hover:scale-105 transition-all shadow-lg"
               >
-                Arrêter la partie
+                {state.players.filter(p => !p.finishedRank).length <= 2 ? 'Voir le classement' : 'Continuer pour le classement'}
               </button>
               <button
-                onClick={() => {
-                  // Continue game: just clear winner state?
-                  // But we need to clear it in useGameLogic or just hide modal?
-                  // If we hide modal, winner state persists.
-                  // We need an action to "dismiss winner".
-                  // Let's add a simple state update in App for now or use a new action.
-                  // Actually, useGameLogic doesn't have a "clearWinner" action.
-                  // I'll add one or just hack it by setting winner to null via a new action if I can edit useGameLogic again.
-                  // Or I can just use a local state to hide it? No, state.winner comes from hook.
-                  // I'll add a clearWinner action to useGameLogic in next step if needed.
-                  // For now, let's assume actions.continueGame() exists or I'll add it.
-                  actions.continueGame();
-                }}
+                onClick={() => actions.resetGame()}
                 className="w-full p-4 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors"
               >
-                Continuer (pour le classement)
+                Nouvelle Partie
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Final Leaderboard Modal */}
+      {state.gameStatus === 'finished' && (
+        <div className="fixed inset-0 z-[80] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in zoom-in duration-300">
+          <div className="w-full max-w-md bg-[#111] border border-white/10 p-6 md:p-8 rounded-3xl text-center relative overflow-hidden">
+            {/* Background Effects */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-8 tracking-tight uppercase">Classement Final</h2>
+
+            <div className="space-y-4 mb-8">
+              {state.players
+                .sort((a, b) => (a.finishedRank || 999) - (b.finishedRank || 999)) // Sort by rank
+                .map((player, index) => (
+                  <div key={player.id} className={clsx(
+                    "flex items-center justify-between p-4 rounded-xl border border-white/5",
+                    player.finishedRank === 1 ? "bg-gradient-to-r from-yellow-500/20 to-amber-500/10 border-yellow-500/30" : "bg-white/5"
+                  )}>
+                    <div className="flex items-center gap-4">
+                      <div className={clsx(
+                        "w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg",
+                        player.finishedRank === 1 ? "bg-yellow-500 text-black" :
+                          player.finishedRank === 2 ? "bg-gray-300 text-black" :
+                            player.finishedRank === 3 ? "bg-amber-700 text-white" : "bg-white/10 text-white/50"
+                      )}>
+                        {player.finishedRank || '-'}
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-white text-lg">{player.name}</div>
+                        <div className="text-xs text-white/50 uppercase tracking-widest">{player.score.toLocaleString()} pts</div>
+                      </div>
+                    </div>
+                    {player.finishedRank === 1 && <Trophy size={24} className="text-yellow-500" />}
+                    {player.finishedRank === 2 && <Medal size={24} className="text-gray-300" />}
+                    {player.finishedRank === 3 && <Medal size={24} className="text-amber-700" />}
+                  </div>
+                ))}
+            </div>
+
+            <button
+              onClick={() => actions.resetGame()}
+              className="w-full p-4 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition-colors shadow-xl"
+            >
+              Nouvelle Partie
+            </button>
           </div>
         </div>
       )}
@@ -218,6 +257,7 @@ function App() {
           <div className="w-full max-w-xs bg-[#111] border border-white/10 p-6 rounded-3xl">
             <h3 className="text-sm font-medium text-white/50 uppercase tracking-widest mb-4">Modifier Joueur</h3>
             <input
+              id="edit-player-input"
               autoFocus
               type="text"
               className="w-full bg-transparent border-b border-white/20 py-2 text-xl text-white focus:outline-none focus:border-white transition-colors mb-6"
@@ -241,7 +281,14 @@ function App() {
                 <Trash2 size={18} />
               </button>
               <button
-                onClick={() => setEditingPlayerId(null)}
+                onClick={() => {
+                  // Save changes
+                  const input = document.getElementById('edit-player-input');
+                  if (input) {
+                    actions.updatePlayerName(editingPlayerId, input.value);
+                  }
+                  setEditingPlayerId(null);
+                }}
                 className="flex-[2] p-3 rounded-xl bg-white text-black font-medium hover:bg-gray-200 transition-colors"
               >
                 OK

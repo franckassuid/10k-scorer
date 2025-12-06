@@ -10,6 +10,10 @@ const INITIAL_STATE = {
     currentPlayerIndex: 0,
     history: [], // Global undo history
     notification: null,
+    targetScore: 10000,
+    isLastRound: false,
+    lastRoundInitiator: null,
+    gameStatus: 'playing', // 'playing' | 'finished'
 };
 
 // Helper to get the current valid score from history
@@ -52,6 +56,11 @@ export const useGameLogic = () => {
                     score: migratedHistory.length > 0 ? getCurrentScore(migratedHistory) : 0
                 };
             });
+            // Migration: Ensure new fields exist
+            if (!parsed.targetScore) parsed.targetScore = 10000;
+            if (parsed.isLastRound === undefined) parsed.isLastRound = false;
+            if (!parsed.gameStatus) parsed.gameStatus = 'playing';
+
             return parsed;
         }
         return INITIAL_STATE;
@@ -125,12 +134,28 @@ export const useGameLogic = () => {
             players: prev.players.map(p => ({
                 ...p,
                 score: 0,
-                history: []
+                history: [],
+                finishedRank: undefined
             })),
             history: [],
-            notification: { message: 'Nouvelle partie commencée', type: 'success' }
+            notification: { message: 'Nouvelle partie commencée', type: 'success' },
+            gameStatus: 'playing',
+            targetScore: 10000,
+            isLastRound: false,
+            lastRoundInitiator: null
         }));
         setTempScore(0);
+        setTempScore(0);
+    };
+
+    const getNextPlayerIndex = (players, currentIndex) => {
+        let attempts = 0;
+        let nextIndex = (currentIndex + 1) % players.length;
+        while (players[nextIndex].finishedRank && attempts < players.length) {
+            nextIndex = (nextIndex + 1) % players.length;
+            attempts++;
+        }
+        return nextIndex;
     };
 
     const updateTempScore = (amount) => {
@@ -146,8 +171,19 @@ export const useGameLogic = () => {
 
     const validateTurn = () => {
         const currentPlayer = state.players[state.currentPlayerIndex];
+        const currentScore = getCurrentScore(currentPlayer.history);
+        const newTotalScore = currentScore + tempScore;
 
         // Validation rules
+        // Exact Score Check
+        if (newTotalScore > state.targetScore) {
+            setState(prev => ({
+                ...prev,
+                notification: { message: `Impossible ! Il faut tomber pile sur ${state.targetScore}.`, type: 'error' }
+            }));
+            return;
+        }
+
         if (tempScore !== 0) {
             if (Math.abs(tempScore) < 200) {
                 setState(prev => ({ ...prev, notification: { message: 'Minimum 200 points requis !', type: 'error' } }));
@@ -165,25 +201,18 @@ export const useGameLogic = () => {
         let newPlayers = [...state.players];
         let player = { ...newPlayers[state.currentPlayerIndex] };
 
-        const currentScore = getCurrentScore(player.history);
-        const newTotalScore = currentScore + tempScore;
-
-        // Cross Logic: Check if newTotalScore matches any opponent's valid total score
-        if (tempScore !== 0) { // Only check cross if score changed? Or always? Usually on score change.
+        // Cross Logic (Same as before)
+        if (tempScore !== 0) {
             newPlayers.forEach((p, idx) => {
-                if (idx !== state.currentPlayerIndex) {
-                    // Find if opponent has this total score in their history AND it is not crossed
+                if (idx !== state.currentPlayerIndex && !p.finishedRank) {
                     const matchingEntryIndex = p.history.findIndex(h => h.totalScore === newTotalScore && !h.crossed);
-
                     if (matchingEntryIndex !== -1) {
-                        // Cross it out!
                         const newOpponentHistory = [...p.history];
                         newOpponentHistory[matchingEntryIndex] = {
                             ...newOpponentHistory[matchingEntryIndex],
                             crossed: true,
-                            crossReason: 'cut' // To distinguish from bars if needed
+                            crossReason: 'cut'
                         };
-
                         newPlayers[idx] = {
                             ...p,
                             history: newOpponentHistory,
@@ -195,20 +224,7 @@ export const useGameLogic = () => {
             });
         }
 
-        // Add new entry for current player
-        // If tempScore is 0, it's a pass. Does it add a history entry?
-        // "Si un joueur choisit un tour à 0 point, il prend 1 barre." -> This is handled by "Bar" button usually.
-        // But if they validate 0?
-        // Let's assume Validate 0 is just a pass without penalty if they didn't click Bar?
-        // User said: "Si un joueur choisit un tour à 0 point, il prend 1 barre."
-        // So Validate 0 SHOULD be a Bar?
-        // But we have a separate "Bar" button.
-        // Let's keep Validate for points and Bar button for bars.
-        // If they validate 0, maybe they just want to pass turn?
-        // But in 10000, if you don't score, you get a bar.
-        // So Validate 0 should probably trigger addBar logic?
-        // Let's stick to: Validate is for Points. Bar button is for 0 points/fail.
-
+        // Add history
         if (tempScore !== 0) {
             const newEntry = {
                 totalScore: newTotalScore,
@@ -218,33 +234,91 @@ export const useGameLogic = () => {
                 crossed: false,
                 turn: state.history.length + 1
             };
-
             player.history = [...player.history, newEntry];
             player.score = getCurrentScore(player.history);
         }
 
         newPlayers[state.currentPlayerIndex] = player;
 
-        // Win Condition Check
+        // Logic for Last Round / Sudden Death
+        let nextPlayerIndex = getNextPlayerIndex(newPlayers, state.currentPlayerIndex);
+        let isLastRound = state.isLastRound;
+        let lastRoundInitiator = state.lastRoundInitiator;
+        let targetScore = state.targetScore;
         let winner = null;
-        if (newTotalScore >= 10000) {
-            winner = player;
-            // Trigger confetti
-            import('canvas-confetti').then((confetti) => {
-                confetti.default({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 }
+        let gameStatus = state.gameStatus;
+
+        // Check against Target Score
+        if (newTotalScore === targetScore) {
+            if (!isLastRound) {
+                // FIRST person to reach target -> Trigger Last Round
+                isLastRound = true;
+                lastRoundInitiator = player.id;
+                notification = {
+                    message: `Dernier tour ! Objectif : ${targetScore}`,
+                    type: 'warning'
+                };
+            } else {
+                // Someone else ALSO reached the target during Last Round
+                // Rule: "Si un joueur arrive à 10000 aussi, on continue jusqu'à 11000"
+                targetScore += 1000;
+                isLastRound = false;
+                lastRoundInitiator = null;
+                notification = {
+                    message: `Prolongations ! Nouvel objectif : ${targetScore}`,
+                    type: 'success'
+                };
+            }
+        }
+
+        // Handling Turn End & Game Over
+        if (isLastRound) {
+            // Check if we are about to pass the turn back to the Initiator
+            // This means everyone had their chance.
+            const nextPlayer = newPlayers[nextPlayerIndex];
+
+            // If the next active player is the one who started the last round, then the round is fully over.
+            if (nextPlayer.id === lastRoundInitiator) {
+
+                // Determine Winner for this phase
+                // In exact score mode, only those with score == targetScore are candidates.
+                // But theoretically, with extension logic, there should be ONLY one or multiple.
+                // Since "Extension" triggers if *another* reaches targetScore,
+                // If we are here, it means NOBODY ELSE reached targetScore
+                // OR we are finishing the round for the initiator himself? No initiator is active player usually?
+                // Wait. Initiator played -> Next -> Next -> Back to Initiator.
+                // When "Back to Initiator", Initiator is NOT playing. We stop BEFORE him.
+                // So if nextPlayer.id === lastRoundInitiator, we stop.
+
+                // The winner is the Initiator (since no extension happened).
+                // Or anyone who had score == targetScore? 
+                // But if anyone else had score == targetScore, we would have extended.
+                // So ONLY the Initiator has the target score.
+
+                const currentRank = newPlayers.filter(p => p.finishedRank).length + 1;
+                winner = newPlayers.find(p => p.id === lastRoundInitiator);
+
+                // Trigger confetti
+                import('canvas-confetti').then((confetti) => {
+                    confetti.default({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
                 });
-            });
+            }
         }
 
         setState(prev => ({
             ...prev,
             players: newPlayers,
-            currentPlayerIndex: winner ? prev.currentPlayerIndex : (prev.currentPlayerIndex + 1) % prev.players.length, // Don't change turn if won
+            currentPlayerIndex: winner ? prev.currentPlayerIndex : nextPlayerIndex, // Stay on winner if won
             notification: notification || prev.notification,
-            winner: winner // Add winner to state
+            winner,
+            targetScore,
+            isLastRound,
+            lastRoundInitiator,
+            gameStatus
         }));
         setTempScore(0);
     };
@@ -302,10 +376,12 @@ export const useGameLogic = () => {
 
         newPlayers[state.currentPlayerIndex] = player;
 
+        let nextIndex = getNextPlayerIndex(newPlayers, state.currentPlayerIndex);
+
         setState(prev => ({
             ...prev,
             players: newPlayers,
-            currentPlayerIndex: (prev.currentPlayerIndex + 1) % prev.players.length,
+            currentPlayerIndex: nextIndex,
             notification
         }));
         setTempScore(0);
@@ -314,16 +390,43 @@ export const useGameLogic = () => {
     const clearNotification = () => setState(prev => ({ ...prev, notification: null }));
 
     const continueGame = () => {
+        // Mark winner as finished
+        let newPlayers = [...state.players];
+        const winnerIndex = newPlayers.findIndex(p => p.id === state.winner.id);
+        const currentRank = newPlayers.filter(p => p.finishedRank).length + 1;
+
+        newPlayers[winnerIndex] = {
+            ...newPlayers[winnerIndex],
+            finishedRank: currentRank
+        };
+
+        const activePlayersCount = newPlayers.filter(p => !p.finishedRank).length;
+        let gameStatus = activePlayersCount <= 1 ? 'finished' : 'playing';
+
+        // Find next active player
+        // We start searching from the winner's position (or next)?
+        // Previous logic kept currentIndex on winner.
+        let nextIndex = getNextPlayerIndex(newPlayers, state.currentPlayerIndex);
+
         setState(prev => ({
             ...prev,
+            players: newPlayers,
             winner: null,
-            currentPlayerIndex: (prev.currentPlayerIndex + 1) % prev.players.length
+            currentPlayerIndex: nextIndex,
+            isLastRound: false,
+            lastRoundInitiator: null,
+            gameStatus
         }));
     };
+
+    const currentPlayer = state.players[state.currentPlayerIndex];
+    const currentTotalScore = currentPlayer ? getCurrentScore(currentPlayer.history) : 0;
+    const remainingScore = (state.targetScore || 10000) - currentTotalScore - tempScore;
 
     return {
         state,
         tempScore,
+        remainingScore,
         actions: {
             addPlayer,
             removePlayer,
