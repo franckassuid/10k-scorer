@@ -27,10 +27,10 @@ function App() {
 
 
   return (
-    <div className="h-screen bg-black text-white flex flex-col font-sans selection:bg-white/20 overflow-hidden">
+    <div className="h-screen w-screen bg-black text-white flex flex-col font-sans selection:bg-white/20 overflow-hidden fixed inset-0">
 
       {/* Header */}
-      <header className="px-3 py-2 flex items-center justify-between border-b border-white/10 bg-black/50 backdrop-blur-md sticky top-0 z-50 shrink-0">
+      <header className="px-3 py-2 flex items-center justify-between border-b border-white/10 bg-black/50 backdrop-blur-md z-50 shrink-0 h-12 md:h-16">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="10K Scorer Logo" className="h-6 w-6 object-contain" />
           <h1 className="text-lg font-bold tracking-widest uppercase bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
@@ -46,11 +46,11 @@ function App() {
       </header>
 
       {/* Main Content - Player Columns */}
-      <main className="flex-1 overflow-hidden flex flex-col">
-        {/* Mobile: Horizontal Scroll Flex | Desktop: Horizontal Scroll Flex (No Grid) */}
+      <main className="flex-1 overflow-hidden relative w-full">
+        {/* Horizontal Scroll Container */}
         <div
           ref={scrollContainerRef}
-          className="flex-1 flex gap-0 md:gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-hide h-full items-start"
+          className="absolute inset-0 flex gap-0 md:gap-6 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide items-start"
         >
           {state.players.map((player, index) => {
             // Dynamic width for mobile
@@ -63,7 +63,7 @@ function App() {
               <div
                 key={player.id}
                 className={clsx(
-                  "snap-center shrink-0 flex flex-col h-full md:h-full min-w-[85px] md:w-[300px] transition-all duration-300",
+                  "snap-center shrink-0 flex flex-col h-full min-w-[85px] md:w-[300px] transition-all duration-300",
                   mobileClass
                 )}
               >
@@ -78,7 +78,7 @@ function App() {
           })}
 
           {/* Add Player Button */}
-          <div className="snap-center shrink-0 hidden md:flex items-center justify-center border-l border-white/10 md:border-2 md:border-dashed md:border-white/10 md:rounded-2xl w-[85px] md:w-[100px] md:h-full hover:bg-white/5 transition-colors cursor-pointer group"
+          <div className="snap-center shrink-0 hidden md:flex items-center justify-center border-l border-white/10 md:border-2 md:border-dashed md:border-white/10 md:rounded-2xl w-[85px] md:w-[100px] h-full hover:bg-white/5 transition-colors cursor-pointer group"
             onClick={() => actions.addPlayer()}
           >
             <button className="p-4 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors">

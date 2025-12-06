@@ -13,11 +13,11 @@ export function ScoreColumn({ player, isActive, onEdit, onSelect }) {
 
     return (
         <div className={clsx(
-            "flex flex-col h-full flex-1 border-r border-white/10 last:border-r-0 md:border-r-0 md:rounded-2xl transition-all duration-300",
+            "flex flex-col h-full w-full border-r border-white/10 last:border-r-0 md:border-r-0 md:rounded-2xl transition-all duration-300 overflow-hidden",
             isActive ? "bg-white/5 md:bg-white/10 md:scale-105 md:shadow-2xl md:z-10" : "bg-transparent md:bg-white/5"
         )}>
-            {/* Header */}
-            <div className="p-2 md:p-6 flex flex-col items-center border-b border-white/10 bg-black z-20">
+            {/* Header - Fixed */}
+            <div className="p-2 md:p-6 flex flex-col items-center border-b border-white/10 bg-black/90 backdrop-blur-sm z-20 shrink-0">
                 <button
                     onClick={onEdit}
                     className="text-[10px] md:text-xs font-medium tracking-[0.2em] uppercase text-white/50 hover:text-white transition-colors mb-1 md:mb-4 truncate max-w-full"
@@ -43,12 +43,12 @@ export function ScoreColumn({ player, isActive, onEdit, onSelect }) {
                     </button>
                 )}
                 {isActive && (
-                    <div className="h-[20px] md:h-[26px]" />
+                    <div className="h-[20px] md:h-[26px]" /> /* Spacer to keep alignment */
                 )}
             </div>
 
-            {/* History List (Total Scores) */}
-            <div className="flex-1 overflow-y-auto p-1 md:p-2 space-y-0.5 md:space-y-1 scrollbar-hide scroll-smooth">
+            {/* History List (Total Scores) - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-1 md:p-2 space-y-0.5 md:space-y-1 scrollbar-hide scroll-smooth w-full">
                 {(player.history || []).map((entry, idx) => (
                     <div
                         key={`${entry.turn}-${idx}`}
