@@ -30,10 +30,10 @@ function App() {
     <div className="h-[100dvh] w-screen bg-black text-white flex flex-col font-sans selection:bg-white/20 overflow-hidden fixed inset-0">
 
       {/* Header */}
-      <header className="px-3 py-2 flex items-center justify-between border-b border-white/10 bg-black/50 backdrop-blur-md z-50 shrink-0 h-12 md:h-16 pt-safe">
+      <header className="px-3 py-2 flex items-center justify-between border-b border-white/10 bg-black/50 backdrop-blur-md z-50 shrink-0 h-10 md:h-12 lg:h-16 pt-safe transition-all">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="10K Scorer Logo" className="h-6 w-6 object-contain" />
-          <h1 className="text-lg font-bold tracking-widest uppercase bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
+          <img src="/logo.png" alt="10K Scorer Logo" className="h-5 w-5 md:h-6 md:w-6 object-contain" />
+          <h1 className="text-base md:text-lg font-bold tracking-widest uppercase bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
             10K Scorer
           </h1>
         </div>
@@ -50,21 +50,33 @@ function App() {
         {/* Horizontal Scroll Container */}
         <div
           ref={scrollContainerRef}
-          className="absolute inset-0 flex gap-0 md:gap-6 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide items-start"
+          className="absolute inset-0 flex gap-0 md:gap-4 lg:gap-6 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide items-start"
         >
           {state.players.map((player, index) => {
-            // Dynamic width for mobile
-            let mobileClass = "w-full"; // Default
-            if (state.players.length === 2) mobileClass = "w-1/2";
-            else if (state.players.length === 3) mobileClass = "w-1/3";
-            else if (state.players.length >= 4) mobileClass = "w-1/4";
+            // Dynamic width logic
+            let widthClass = "w-full"; // Mobile default (1 player per screen)
+
+            // Percentage widths for Mobile & Tablet
+            // If screen is wide enough to fit them, we want them to share space.
+            // On desktop (lg), we might want fixed max-widths if many players.
+
+            if (state.players.length === 2) widthClass = "w-1/2";
+            else if (state.players.length === 3) widthClass = "w-1/3";
+            else if (state.players.length >= 4) widthClass = "w-1/4";
 
             return (
               <div
                 key={player.id}
                 className={clsx(
-                  "snap-center shrink-0 flex flex-col h-full min-w-[85px] md:w-[300px] transition-all duration-300",
-                  mobileClass
+                  "snap-center shrink-0 flex flex-col h-full min-w-[85px] transition-all duration-300",
+                  // Use widthClass for mobile/tablet. On large desktop, enforce max width for readability?
+                  // User complained about empty space, so let them stretch on tablet.
+                  // Just apply widthClass universally, but maybe add a max-width constraint for massive screens?
+                  // For now, let's keep it filling 100%.
+                  widthClass,
+                  // On very large screens with few players, limit width to avoid massive columns?
+                  // "md:max-w-[400px]" could be good, but user wants to fill space.
+                  // Let's stick to percentage widths which fill the screen.
                 )}
               >
                 <ScoreColumn
@@ -89,7 +101,7 @@ function App() {
       </main>
 
       {/* Controls Area - Sticky Bottom with Safe Area */}
-      <div className="p-2 md:p-6 border-t border-white/10 bg-black/90 backdrop-blur-md z-50 shrink-0 pb-[env(safe-area-inset-bottom,20px)] md:pb-6">
+      <div className="p-2 md:p-4 lg:p-6 border-t border-white/10 bg-black/90 backdrop-blur-md z-50 shrink-0 pb-[env(safe-area-inset-bottom,20px)] md:pb-4 lg:pb-6">
         <div className="max-w-md mx-auto w-full">
           <Controls
             tempScore={tempScore}

@@ -17,17 +17,17 @@ export function ScoreColumn({ player, isActive, onEdit, onSelect }) {
             isActive ? "bg-white/5 md:bg-white/10 md:scale-105 md:shadow-2xl md:z-10" : "bg-transparent md:bg-white/5"
         )}>
             {/* Header - Fixed */}
-            <div className="p-2 md:p-6 flex flex-col items-center border-b border-white/10 bg-black/90 backdrop-blur-sm z-20 shrink-0">
+            <div className="p-2 md:p-3 lg:p-6 flex flex-col items-center border-b border-white/10 bg-black/90 backdrop-blur-sm z-20 shrink-0">
                 <button
                     onClick={onEdit}
-                    className="text-[10px] md:text-xs font-medium tracking-[0.2em] uppercase text-white/50 hover:text-white transition-colors mb-1 md:mb-4 truncate max-w-full"
+                    className="text-[10px] md:text-[11px] lg:text-xs font-medium tracking-[0.2em] uppercase text-white/50 hover:text-white transition-colors mb-1 md:mb-2 lg:mb-4 truncate max-w-full"
                 >
                     {player.name}
                 </button>
 
                 {/* Total Score */}
                 <div className={clsx(
-                    "text-3xl md:text-5xl font-light tracking-tighter tabular-nums transition-colors mb-1 md:mb-4",
+                    "text-3xl md:text-4xl lg:text-5xl font-light tracking-tighter tabular-nums transition-colors mb-1 md:mb-2 lg:mb-4",
                     isActive ? "text-white" : "text-white/50"
                 )}>
                     {player.score.toLocaleString()}
